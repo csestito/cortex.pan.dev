@@ -4,28 +4,38 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React from 'react';
+import Head from "@docusaurus/Head";
 import Link from "@docusaurus/Link";
-import Head from '@docusaurus/Head';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import useBaseUrl from '@docusaurus/useBaseUrl';
-import DocPaginator from '@theme/DocPaginator';
-import DocVersionSuggestions from '@theme/DocVersionSuggestions';
-import TOC from '@theme/TOC';
-import classnames from "classnames";
-import clsx from 'clsx';
-import styles from './styles.module.css';
+import { useTitleFormatter } from "@docusaurus/theme-common";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+import DocPaginator from "@theme/DocPaginator";
+import DocVersionSuggestions from "@theme/DocVersionSuggestions";
 import {
   useActivePlugin,
-  useVersions,
   useActiveVersion,
-} from '@theme/hooks/useDocs';
+  useVersions,
+} from "@theme/hooks/useDocs";
+import IconEdit from "@theme/IconEdit";
+import TOC from "@theme/TOC";
+import classnames from "classnames";
+import clsx from "clsx";
+import React from "react";
+import styles from "./styles.module.css";
 
 function DocItem(props) {
-  const {siteConfig = {}} = useDocusaurusContext();
-  const {url: siteUrl, title: siteTitle, titleDelimiter} = siteConfig;
-  const {content: DocContent} = props;
-  const {metadata} = DocContent;
+  const { siteConfig } = useDocusaurusContext();
+  const { url: siteUrl } = siteConfig;
+  const { content: DocContent } = props;
+  const {
+    metadata,
+    frontMatter: {
+      image: metaImage,
+      keywords,
+      hide_title: hideTitle,
+      hide_table_of_contents: hideTableOfContents,
+    },
+  } = DocContent;
   const {
     description,
     title,
@@ -35,17 +45,40 @@ function DocItem(props) {
     lastUpdatedBy,
     source,
   } = metadata;
-  const {
-    frontMatter: {
-      image: metaImage,
-      keywords,
-      hide_title: hideTitle,
-      hide_table_of_contents: hideTableOfContents,
-    },
-  } = DocContent;
+
   const issueTitle = `Issue with "${title}" in ${source}`;
-  const issueUrl = `https://github.com/PaloAltoNetworks/prisma.pan.dev/issues/new?labels=documentation&template=developer-documentation-issue.md&title=${issueTitle}`;
-  const {pluginId} = useActivePlugin({
+  //IMPORTANT NOTE: if changing the body, note that the defacto max url length is 2000 chars for IE
+  const issueBody = `
+<!-- 
+Thank you for taking the time to help us improve our documentation! Please describe the problem and a suggested fix below and we'll get back to you as soon as we can.
+-->
+
+## Describe the problem
+
+* Page: [${title}](${siteConfig.url}${permalink})
+* Source: ${editUrl}
+
+<!--- Is this a typo, stale information, request for improvement, inaccuracy? -->
+<!--- Clearly and concisely describe the problem with the documentation -->
+
+
+## Screenshots
+<!-- If applicable, add screenshots to help explain your problem. -->
+
+## Environment
+ - OS: [e.g. Windows]
+ - Browser: [e.g. chrome, safari, firefox..]
+ - Browser Version:
+
+## Suggested fix
+
+<!--- If possible, help us by offering a suggested fix to the problem. If you know the fix, you may also submit a PR to fix the issue if you like! -->
+
+`;
+  const issueUrl = `https://github.com/PaloAltoNetworks/cortex.pan.dev/issues/new?labels=documentation&body=${encodeURIComponent(
+    issueBody
+  )}&title=${encodeURIComponent(issueTitle)}`;
+  const { pluginId } = useActivePlugin({
     failfast: true,
   });
   const versions = useVersions(pluginId);
@@ -54,9 +87,7 @@ function DocItem(props) {
   // See https://github.com/facebook/docusaurus/issues/3362
 
   const showVersionBadge = versions.length > 1;
-  const metaTitle = title
-    ? `${title} ${titleDelimiter} ${siteTitle}`
-    : siteTitle;
+  const metaTitle = useTitleFormatter(title);
   const metaImageUrl = useBaseUrl(metaImage, {
     absolute: true,
   });
@@ -70,133 +101,121 @@ function DocItem(props) {
           <meta property="og:description" content={description} />
         )}
         {keywords && keywords.length && (
-          <meta name="keywords" content={keywords.join(',')} />
+          <meta name="keywords" content={keywords.join(",")} />
         )}
         {metaImage && <meta property="og:image" content={metaImageUrl} />}
-        {metaImage && <meta property="twitter:image" content={metaImageUrl} />}
+        {metaImage && <meta name="twitter:image" content={metaImageUrl} />}
         {metaImage && (
           <meta name="twitter:image:alt" content={`Image for ${title}`} />
         )}
         {permalink && <meta property="og:url" content={siteUrl + permalink} />}
         {permalink && <link rel="canonical" href={siteUrl + permalink} />}
       </Head>
-      <div
-        className={clsx('container padding-vert--lg', styles.docItemWrapper)}>
-        <div className="row">
-          <div
-            className={clsx('col', {
-              [styles.docItemCol]: !hideTableOfContents,
-            })}>
-            <DocVersionSuggestions />
-            <div className={styles.docItemContainer}>
-              <article>
-                {showVersionBadge && (
-                  <div>
-                    <span className="badge badge--secondary">
-                      Version: {version.label}
-                    </span>
-                  </div>
-                )}
-                {!hideTitle && (
-                  <header>
-                    <h1 className={styles.docTitle}>{title}</h1>
-                  </header>
-                )}
-                <div className="markdown">
-                  <DocContent />
-                </div>
-              </article>
-              {(editUrl || lastUpdatedAt || lastUpdatedBy) && (
-                <div className="margin-vert--xl">
-                  <div className="row">
-                    <div className="col">
-                      {editUrl && (
-                        <a
-                          href={editUrl}
-                          target="_blank"
-                          rel="noreferrer noopener">
-                          <svg
-                            fill="currentColor"
-                            height="1.2em"
-                            width="1.2em"
-                            preserveAspectRatio="xMidYMid meet"
-                            viewBox="0 0 40 40"
-                            style={{
-                              marginRight: '0.3em',
-                              verticalAlign: 'sub',
-                            }}>
-                            <g>
-                              <path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z" />
-                            </g>
-                          </svg>
-                          Edit this page
-                        </a>
-                      )}
-                    </div>
-                    {(lastUpdatedAt || lastUpdatedBy) && (
-                      <div className="col text--right">
-                        <em>
-                          <small>
-                            Last updated{' '}
-                            {lastUpdatedAt && (
-                              <>
-                                on{' '}
-                                <time
-                                  dateTime={new Date(
-                                    lastUpdatedAt * 1000,
-                                  ).toISOString()}
-                                  className={styles.docLastUpdatedAt}>
-                                  {new Date(
-                                    lastUpdatedAt * 1000,
-                                  ).toLocaleDateString()}
-                                </time>
-                                {lastUpdatedBy && ' '}
-                              </>
-                            )}
-                            {lastUpdatedBy && (
-                              <>
-                                by <strong>{lastUpdatedBy}</strong>
-                              </>
-                            )}
-                            {process.env.NODE_ENV === 'development' && (
-                              <div>
-                                <small>
-                                  {' '}
-                                  (Simulated during dev for better perf)
-                                </small>
-                              </div>
-                            )}
-                          </small>
-                        </em>
-                      </div>
-                    )}
-                  </div>
-                  <div className="row">
-                    <div className="col text--right">
-                      <Link
-                        className={classnames(
-                          "button button--outline button--primary button--md"
-                        )}
-                        href={issueUrl}
-                        target="_blank"
-                      >
-                        Report an Issue
-                      </Link>
-                    </div>
-                  </div>
+
+      <div className="row">
+        <div
+          className={clsx("col", {
+            [styles.docItemCol]: !hideTableOfContents,
+          })}
+        >
+          <DocVersionSuggestions />
+          <div className={styles.docItemContainer}>
+            <article>
+              {showVersionBadge && (
+                <div>
+                  <span className="badge badge--secondary">
+                    Version: {version.label}
+                  </span>
                 </div>
               )}
-              <div className="margin-vert--lg">
-                <DocPaginator metadata={metadata} />
+              {!hideTitle && (
+                <header>
+                  <h1 className={styles.docTitle}>{title}</h1>
+                </header>
+              )}
+              <div className="markdown">
+                <DocContent />
               </div>
+            </article>
+            {(editUrl || lastUpdatedAt || lastUpdatedBy) && (
+              <div className="margin-vert--xl">
+                <div className="row">
+                  <div className="col">
+                    {editUrl && (
+                      <a
+                        href={editUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        <IconEdit />
+                        Edit this page
+                      </a>
+                    )}
+                  </div>
+                  {(lastUpdatedAt || lastUpdatedBy) && (
+                    <div className="col text--right">
+                      <em>
+                        <small>
+                          Last updated{" "}
+                          {lastUpdatedAt && (
+                            <>
+                              on{" "}
+                              <time
+                                dateTime={new Date(
+                                  lastUpdatedAt * 1000
+                                ).toISOString()}
+                                className={styles.docLastUpdatedAt}
+                              >
+                                {new Date(
+                                  lastUpdatedAt * 1000
+                                ).toLocaleDateString()}
+                              </time>
+                              {lastUpdatedBy && " "}
+                            </>
+                          )}
+                          {lastUpdatedBy && (
+                            <>
+                              by <strong>{lastUpdatedBy}</strong>
+                            </>
+                          )}
+                          {process.env.NODE_ENV === "development" && (
+                            <div>
+                              <small>
+                                {" "}
+                                (Simulated during dev for better perf)
+                              </small>
+                            </div>
+                          )}
+                        </small>
+                      </em>
+                    </div>
+                  )}
+                </div>
+                <div className="row">
+                  <div className="col text--right">
+                    <Link
+                      className={classnames(
+                        "button button--outline button--primary button--md"
+                      )}
+                      href={issueUrl}
+                      target="_blank"
+                    >
+                      Report an Issue
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="margin-vert--lg">
+              <DocPaginator metadata={metadata} />
             </div>
           </div>
-          {!hideTableOfContents && DocContent.rightToc && (
-            <div className="col col--3">
-              <TOC headings={DocContent.rightToc} />
-            </div>
-          )}
         </div>
+        {!hideTableOfContents && DocContent.toc && (
+          <div className="col col--3">
+            <TOC toc={DocContent.toc} />
+          </div>
+        )}
       </div>
     </>
   );
